@@ -1,0 +1,46 @@
+[user]
+name = dofa.develop
+email = dofa.develop@gmail.com
+
+[color]
+ui = auto
+diff = auto
+
+[alias]
+co = checkout
+br = branch
+ci = commit
+st = status
+cha = "!git checkout -t $(git bselectall)"
+ch = "!git checkout $(git bselect)"
+lg = "!git log $(git bselectall)"
+bselect = "! # select branch with preview; \n\
+f() { \
+_height=$(stty size | awk '{print $1}');\
+git branch | egrep -v '^\\*' | fzf --preview \"git l {1} | head -n $_height\"; \
+}; f"
+
+bselectall = "! # select branch with preview; \n\
+f() { \
+_height=$(stty size | awk '{print $1}');\
+git branch -r | egrep -v '^\\*' | fzf --preview \"git l {1} | head -n $_height\"; \
+}; f"
+
+#l = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%ar)%C(bold blue)<%an>%Creset|%Cgreen(%cr) %C(yellow)<%cn>' --abbrev-commit
+#l = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%ar)%C(bold blue)<%an>%Creset|%Cgreen(%cr) %C(yellow)<%cn>' --abbrev-commit
+l = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%ar, %cr)%C(bold blue)<%an, %cn>%Creset' --abbrev-commit
+find-message = "!git log --all -i --grep"
+find-file = "!git log --all --name-only --pretty=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset)%C(white)%s%C(reset) %C(dim white)-%an%C(reset)%C(bold yellow)%d%C(reset)' --"
+find-hash = "!git branch -a --contains"
+
+[color "diff"]
+meta = yellow bold
+frag = magenta bold
+old = red bold
+new = green bold
+
+[commit]
+#template =
+
+[core]
+editor = nvim
