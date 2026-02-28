@@ -146,6 +146,37 @@ prompt_git_info() {
     fi
 }
 
+setup_ssh() {
+    print_step "SSH 키 설정"
+    local ssh_dir="$HOME/.ssh"
+    local key_file="$ssh_dir/id_ed25519"
+
+    mkdir -p "$ssh_dir"
+    chmod 700 "$ssh_dir"
+
+    if [ -f "$key_file" ]; then
+        print_info "SSH 키 이미 존재함 ($key_file), 건너뜀"
+        printf "\n  공개 키 (GitHub 등에 등록):\n"
+        cat "$key_file.pub"
+        printf "\n"
+        return 0
+    fi
+
+    local email="${GIT_USER_EMAIL:-}"
+    if [ -z "$email" ]; then
+        read -rp "  SSH 키 코멘트 (이메일): " email
+    fi
+
+    ssh-keygen -t ed25519 -C "$email" -f "$key_file" -N ""
+    chmod 600 "$key_file"
+    print_success "SSH 키 생성 완료 ($key_file)"
+
+    printf "\n  아래 공개 키를 GitHub에 등록하세요:\n"
+    printf "  https://github.com/settings/ssh/new\n\n"
+    cat "$key_file.pub"
+    printf "\n"
+}
+
 apply_bashrc() {
     print_step "bashrc 적용"
     append_if_absent \
@@ -315,6 +346,7 @@ install_jetbrains_font() {
 cmd_apply() {
     local config="${1:-}"
     case "$config" in
+        ssh)    setup_ssh ;;
         bashrc) apply_bashrc ;;
         git)    apply_git ;;
         tig)    apply_tig ;;
@@ -325,6 +357,7 @@ cmd_apply() {
             print_error "알 수 없는 config: '${config}'"
             printf "\n사용법: %s apply <config>\n" "$(basename "$0")"
             printf "  config 목록:\n"
+            printf "    ssh     - SSH 키 생성 (ed25519)\n"
             printf "    bashrc  - ~/.bashrc 에 커스텀 설정 추가\n"
             printf "    git     - ~/.gitconfig 복사\n"
             printf "    tig     - ~/.tigrc 복사\n"
@@ -342,6 +375,7 @@ cmd_help() {
     printf "  (인수 없음)       전체 설치 실행\n"
     printf "  apply <config>    특정 config 파일만 적용\n\n"
     printf "config 목록:\n"
+    printf "  ssh     - SSH 키 생성 (ed25519)\n"
     printf "  bashrc  - ~/.bashrc 에 커스텀 설정 추가\n"
     printf "  git     - ~/.gitconfig 복사\n"
     printf "  tig     - ~/.tigrc 복사\n"
@@ -382,6 +416,7 @@ main() {
     install_fzf
     install_nodejs
     install_yarn
+    setup_ssh
     deploy_dotfiles
     setup_tmux_config
     apply_codex_skills
