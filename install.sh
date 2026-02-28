@@ -191,6 +191,36 @@ apply_tmux() {
     deploy_dotfile "$SCRIPT_DIR/tmux/tmux.conf" "$HOME/.tmux.conf"
 }
 
+apply_codex_skills() {
+    print_step "Codex 스킬 배포"
+    local skills_src="$SCRIPT_DIR/ai-agent/codex"
+    local skills_dst="$HOME/.codex/skills"
+
+    if [ ! -d "$skills_src" ]; then
+        print_info "ai-agent/codex 디렉토리 없음, 건너뜀"
+        return 0
+    fi
+
+    mkdir -p "$skills_dst"
+
+    local count=0
+    for skill_dir in "$skills_src"/*/; do
+        [ -d "$skill_dir" ] || continue
+        local skill_name
+        skill_name="$(basename "$skill_dir")"
+        print_info "스킬 복사: $skill_name → $skills_dst/$skill_name"
+        rm -rf "$skills_dst/$skill_name"
+        cp -r "${skill_dir%/}" "$skills_dst/$skill_name"
+        count=$((count + 1))
+    done
+
+    if [ "$count" -eq 0 ]; then
+        print_info "배포할 스킬 없음"
+    else
+        print_success "Codex 스킬 $count 개 배포 완료"
+    fi
+}
+
 deploy_dotfiles() {
     apply_bashrc
     apply_git
@@ -290,6 +320,7 @@ cmd_apply() {
         tig)    apply_tig ;;
         nvim)   apply_nvim ;;
         tmux)   apply_tmux ;;
+        codex)  apply_codex_skills ;;
         *)
             print_error "알 수 없는 config: '${config}'"
             printf "\n사용법: %s apply <config>\n" "$(basename "$0")"
@@ -299,6 +330,7 @@ cmd_apply() {
             printf "    tig     - ~/.tigrc 복사\n"
             printf "    nvim    - ~/.config/nvim/init.vim 복사\n"
             printf "    tmux    - ~/.tmux.conf 생성\n"
+            printf "    codex   - ~/.codex/skills/ 에 스킬 복사\n"
             exit 1
             ;;
     esac
@@ -315,6 +347,7 @@ cmd_help() {
     printf "  tig     - ~/.tigrc 복사\n"
     printf "  nvim    - ~/.config/nvim/init.vim 복사\n"
     printf "  tmux    - ~/.tmux.conf 생성\n"
+    printf "  codex   - ~/.codex/skills/ 에 스킬 복사\n"
 }
 
 main() {
@@ -351,6 +384,7 @@ main() {
     install_yarn
     deploy_dotfiles
     setup_tmux_config
+    apply_codex_skills
     install_vim_plug
     install_neovim_plugins
     setup_coc_nvim
