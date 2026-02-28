@@ -136,6 +136,68 @@ install_yarn() {
     print_success "yarn $(yarn --version) 설치 완료"
 }
 
+install_docker() {
+    print_step "Docker Engine 설치 (Ubuntu 24.04 가이드 기반)"
+
+    local conflict_packages=(
+        docker.io
+        docker-doc
+        docker-compose
+        docker-compose-v2
+        podman-docker
+        containerd
+        runc
+    )
+
+    for pkg in "${conflict_packages[@]}"; do
+        if dpkg -s "$pkg" &>/dev/null; then
+            print_info "충돌 패키지 제거: $pkg"
+            sudo apt-get remove -y "$pkg"
+        fi
+    done
+
+    sudo apt-get update -qq
+    sudo apt-get install -y ca-certificates curl
+    sudo install -m 0755 -d /etc/apt/keyrings
+    sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+    local arch codename
+    arch="$(dpkg --print-architecture)"
+    codename="$(. /etc/os-release && echo "$VERSION_CODENAME")"
+
+    echo \
+      "deb [arch=$arch signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $codename stable" \
+      | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+    sudo apt-get update -qq
+    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+    sudo systemctl enable docker
+    sudo systemctl start docker
+
+    if getent group docker >/dev/null; then
+        if id -nG "$USER" | grep -qw docker; then
+            print_info "사용자 $USER 는 이미 docker 그룹에 포함됨"
+        else
+            sudo usermod -aG docker "$USER"
+            print_info "사용자 $USER 를 docker 그룹에 추가함 (새 로그인 세션부터 적용)"
+        fi
+    fi
+
+    if sudo docker run --rm hello-world >/dev/null 2>&1; then
+        print_success "sudo docker run hello-world 확인 완료"
+    else
+        print_error "sudo docker run hello-world 실행 실패. Docker 데몬 상태를 확인하세요."
+    fi
+
+    if docker compose version >/dev/null 2>&1; then
+        print_success "docker compose plugin 확인 완료"
+    else
+        print_error "docker compose plugin 확인 실패"
+    fi
+}
+
 prompt_git_info() {
     read -rp "  Git 사용자 이름: " GIT_USER_NAME
     read -rp "  Git 이메일: " GIT_USER_EMAIL
@@ -416,6 +478,7 @@ main() {
     install_fzf
     install_nodejs
     install_yarn
+    install_docker
     setup_ssh
     deploy_dotfiles
     setup_tmux_config

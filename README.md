@@ -24,6 +24,7 @@ bash install.sh
 | neovim | 텍스트 에디터 |
 | Node.js LTS | JavaScript 런타임 |
 | yarn | JavaScript 패키지 매니저 |
+| Docker Engine | 컨테이너 런타임 (`docker compose` 포함) |
 
 ### Dotfiles
 | 파일 | 배포 위치 |
@@ -39,6 +40,9 @@ bash install.sh
 - Neovim 플러그인 설치 (vim-plug + PlugInstall)
 - JetBrainsMono Nerd Font 설치
 - Codex 스킬 배포 (`~/.codex/skills/`)
+- Docker 저장소 설정 + Docker Engine 설치
+- Docker 서비스 자동 시작 활성화
+- 현재 사용자 Docker 그룹 추가 (`sudo` 없이 실행 가능, 재로그인 필요)
 
 ## 디렉토리 구조
 
