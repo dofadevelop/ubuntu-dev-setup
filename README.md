@@ -5,8 +5,8 @@ Ubuntu 개발 환경을 처음부터 빠르게 세팅하기 위한 dotfiles 및 
 ## 빠른 시작
 
 ```bash
-git clone <repo-url> ~/dotfiles
-cd ~/dotfiles
+git clone https://github.com/dofadevelop/ubuntu-dev-setup.git
+cd ubuntu-dev-setup
 bash install.sh
 ```
 
