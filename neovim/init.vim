@@ -92,7 +92,7 @@ set autoread
 
 set colorcolumn=100
 
-"set mouse=a
+set mouse=""
 
 "Color
 "set t_Co=256
