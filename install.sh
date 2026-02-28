@@ -136,16 +136,23 @@ install_yarn() {
     print_success "yarn $(yarn --version) 설치 완료"
 }
 
-deploy_dotfiles() {
-    print_step "dotfile 배포"
+prompt_git_info() {
+    read -rp "  Git 사용자 이름: " GIT_USER_NAME
+    read -rp "  Git 이메일: " GIT_USER_EMAIL
 
-    # bashrc: append 방식 (fzf shell integration 포함)
+    if [ -z "$GIT_USER_NAME" ] || [ -z "$GIT_USER_EMAIL" ]; then
+        print_error "이름과 이메일을 모두 입력해야 합니다."
+        exit 1
+    fi
+}
+
+apply_bashrc() {
+    print_step "bashrc 적용"
     append_if_absent \
         "$SCRIPT_DIR/bashrc/bashrc" \
         "$HOME/.bashrc" \
         "setup-ubuntu-env: custom bashrc"
 
-    # fzf shell integration (.fzf.bash 소스)
     local fzf_sentinel="setup-ubuntu-env: fzf integration"
     if grep -qF "$fzf_sentinel" "$HOME/.bashrc" 2>/dev/null; then
         print_info "fzf integration 이미 ~/.bashrc 에 포함됨, 건너뜀"
@@ -156,41 +163,47 @@ deploy_dotfiles() {
         } >> "$HOME/.bashrc"
         print_success "fzf integration ~/.bashrc 에 추가 완료"
     fi
+}
 
-    # gitconfig 복사 후 user 정보 적용
+apply_git() {
+    print_step "gitconfig 적용"
+    if [ -z "${GIT_USER_NAME:-}" ] || [ -z "${GIT_USER_EMAIL:-}" ]; then
+        prompt_git_info
+    fi
     deploy_dotfile "$SCRIPT_DIR/git/gitconfig" "$HOME/.gitconfig"
     git config --global user.name "$GIT_USER_NAME"
     git config --global user.email "$GIT_USER_EMAIL"
-    print_success "gitconfig user 정보 설정 완료 ($GIT_USER_NAME <$GIT_USER_EMAIL>)"
+    print_success "user 정보 설정 완료 ($GIT_USER_NAME <$GIT_USER_EMAIL>)"
+}
 
-    # tigrc
+apply_tig() {
+    print_step "tigrc 적용"
     deploy_dotfile "$SCRIPT_DIR/tig/tigrc" "$HOME/.tigrc"
+}
 
-    # neovim init.vim
+apply_nvim() {
+    print_step "neovim init.vim 적용"
     deploy_dotfile "$SCRIPT_DIR/neovim/init.vim" "$HOME/.config/nvim/init.vim"
 }
 
-setup_tmux_config() {
-    print_step "tmux 설정"
-    local tmux_conf="$HOME/.tmux.conf"
+apply_tmux() {
+    print_step "tmux 설정 적용"
+    deploy_dotfile "$SCRIPT_DIR/tmux/tmux.conf" "$HOME/.tmux.conf"
+}
 
-    if [ -f "$tmux_conf" ]; then
+deploy_dotfiles() {
+    apply_bashrc
+    apply_git
+    apply_tig
+    apply_nvim
+}
+
+setup_tmux_config() {
+    if [ -f "$HOME/.tmux.conf" ]; then
         print_info "~/.tmux.conf 이미 존재함, 건너뜀"
         return 0
     fi
-
-    cat > "$tmux_conf" << 'EOF'
-# 패널 나누기
-unbind %
-bind h split-window -h
-
-unbind '"'
-bind v split-window -v
-
-set -g base-index 1
-setw -g pane-base-index 1
-EOF
-    print_success "~/.tmux.conf 생성 완료"
+    apply_tmux
 }
 
 install_vim_plug() {
@@ -269,7 +282,53 @@ install_jetbrains_font() {
 # main
 # ─────────────────────────────────────────────
 
+cmd_apply() {
+    local config="${1:-}"
+    case "$config" in
+        bashrc) apply_bashrc ;;
+        git)    apply_git ;;
+        tig)    apply_tig ;;
+        nvim)   apply_nvim ;;
+        tmux)   apply_tmux ;;
+        *)
+            print_error "알 수 없는 config: '${config}'"
+            printf "\n사용법: %s apply <config>\n" "$(basename "$0")"
+            printf "  config 목록:\n"
+            printf "    bashrc  - ~/.bashrc 에 커스텀 설정 추가\n"
+            printf "    git     - ~/.gitconfig 복사\n"
+            printf "    tig     - ~/.tigrc 복사\n"
+            printf "    nvim    - ~/.config/nvim/init.vim 복사\n"
+            printf "    tmux    - ~/.tmux.conf 생성\n"
+            exit 1
+            ;;
+    esac
+    printf "\n${GREEN}완료!${RESET}\n"
+}
+
+cmd_help() {
+    printf "사용법: %s [apply <config>]\n\n" "$(basename "$0")"
+    printf "  (인수 없음)       전체 설치 실행\n"
+    printf "  apply <config>    특정 config 파일만 적용\n\n"
+    printf "config 목록:\n"
+    printf "  bashrc  - ~/.bashrc 에 커스텀 설정 추가\n"
+    printf "  git     - ~/.gitconfig 복사\n"
+    printf "  tig     - ~/.tigrc 복사\n"
+    printf "  nvim    - ~/.config/nvim/init.vim 복사\n"
+    printf "  tmux    - ~/.tmux.conf 생성\n"
+}
+
 main() {
+    case "${1:-}" in
+        apply)
+            cmd_apply "${2:-}"
+            return
+            ;;
+        help|--help|-h)
+            cmd_help
+            return
+            ;;
+    esac
+
     print_step "Ubuntu 개발 환경 설정 시작"
     print_info "스크립트 위치: $SCRIPT_DIR"
 
@@ -284,13 +343,7 @@ main() {
 
     # git user 정보 입력
     print_step "Git 사용자 정보 입력"
-    read -rp "  Git 사용자 이름: " GIT_USER_NAME
-    read -rp "  Git 이메일: " GIT_USER_EMAIL
-
-    if [ -z "$GIT_USER_NAME" ] || [ -z "$GIT_USER_EMAIL" ]; then
-        print_error "이름과 이메일을 모두 입력해야 합니다."
-        exit 1
-    fi
+    prompt_git_info
 
     install_apt_packages
     install_fzf
