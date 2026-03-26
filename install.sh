@@ -83,6 +83,7 @@ install_apt_packages() {
         python-dev-is-python3
         python3-pip
         python3-dev
+        zoxide
     )
 
     for pkg in "${packages[@]}"; do
